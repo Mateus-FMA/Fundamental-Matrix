@@ -9,11 +9,11 @@ class InconsistentMatchesException(Exception):
         return repr(self.value)
 
 
-def naive_fmatrix(matches):    
+def eight_points(matches):    
     A = np.matrix([[x2*x1, x2*y1, x2, y2*x1, y2*y1, y2, x1, y1, 1] \
                    for ((x1, y1), (x2, y2)) in matches])
 
-    if A.size < 8:
+    if A.shape[0] < 8:
         raise InconsistentMatchesException("Insufficient amount of matches")
 
     U, S, VT = np.linalg.svd(A)
@@ -28,7 +28,7 @@ def naive_fmatrix(matches):
 
     return u * s * vt
 
-def norm_eight_point(matches):
+def norm_eight_points(matches):
     # Computing centroids.
     n = len(matches)
     left = [np.matrix(list(p)) for p, q in matches]
@@ -44,9 +44,10 @@ def norm_eight_point(matches):
         raise InconsistentMatchesException("Matching points are too close (degenerate to 1 point match).")
 
     # Compute transform to points and merge left and right matches.
-    sqrt2 = math.sqrt(2)
-    T1 = np.matrix([[sqrt2 / avg1, 0, -c1[0, 0]], [0, sqrt2 / avg1, -c1[0, 1]], [0, 0, 1]])
-    T2 = np.matrix([[sqrt2 / avg2, 0, -c2[0, 0]], [0, sqrt2 / avg2, -c2[0, 1]], [0, 0, 1]])
+    s1 = math.sqrt(2) / avg1
+    s2 = math.sqrt(2) / avg2
+    T1 = np.matrix([[s1, 0, -s1 * c1[0, 0]], [0, s1, -s1 * c1[0, 1]], [0, 0, 1]])
+    T2 = np.matrix([[s2, 0, -s2 * c2[0, 0]], [0, s2, -s2 * c2[0, 1]], [0, 0, 1]])
 
     norm_left = [T1 * np.matrix([[x[0, 0]], [x[0, 1]], [1]]) for x in left]
     norm_left[:] = [(x[0, 0] / x[2, 0], x[1, 0] / x[2, 0]) for x in norm_left]
@@ -56,5 +57,5 @@ def norm_eight_point(matches):
     norm_matches = zip(norm_left, norm_right)
 
     # Get the fundamental matrix with "naive" method and denormalize its result.
-    F = naive_fmatrix(norm_matches)    
+    F = eight_points(norm_matches)
     return np.transpose(T2) * F * T1

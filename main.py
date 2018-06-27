@@ -16,7 +16,7 @@ if __name__ == "__main__":
     lines = [[float(i) for i in line.split()[1:]] for line in file_params]
     file_params.close()
 
-    errors_naive = []
+    errors_ep = []
     errors_norm = []
 
     for i in range(N-1):
@@ -24,14 +24,14 @@ if __name__ == "__main__":
         img2 = cv2.imread(data_dir + "temple{:04}.png".format(i+2), cv2.IMREAD_GRAYSCALE)
 
         matches = sm.get_matches(img1, img2)
-        N = min(len(matches), 20)
+        N = len(matches)
 
         try:
-            F_naive = fm.naive_fmatrix(matches[:N])
-            F_norm = fm.norm_eight_point(matches[:N])
+            F_ep = fm.eight_points(matches[:N])
+            F_norm_ep = fm.norm_eight_points(matches[:N])
 
-            F_naive = F_naive / np.max(F_naive.flatten())
-            F_norm = F_norm / np.max(F_norm.flatten())
+            F_ep = F_ep / np.max(F_ep.flatten())
+            F_norm_ep = F_norm_ep / np.max(F_norm_ep.flatten())
 
             K1 = np.matrix([[lines[i][0], lines[i][1], lines[i][2]], \
                             [lines[i][3], lines[i][4], lines[i][5]], \
@@ -60,17 +60,14 @@ if __name__ == "__main__":
             F_gt = e2_cross * P2 * np.linalg.pinv(P1)
             F_gt = F_gt / np.max(F_gt.flatten())
 
-            errors_naive.append(np.linalg.norm(F_naive - F_gt))
-            errors_norm.append(np.linalg.norm(F_norm - F_gt))
+            errors_ep.append(np.linalg.norm(F_ep - F_gt))
+            errors_norm.append(np.linalg.norm(F_norm_ep - F_gt))
         except fm.InconsistentMatchesException as e:
             continue
 
-    e1 = [x for x in errors_naive if x < 10]
-    e2 = [x for x in errors_norm if x < 10]
-
-    plt.plot(range(len(errors_naive)), errors_naive, "b--", \
-             range(len(errors_norm)), errors_naive, "r+")
+    line_ep, = plt.plot(range(len(errors_ep)), errors_ep, label="8-point")
+    line_norm, = plt.plot(range(len(errors_norm)), errors_norm, label="Normalized 8-point")
+    plt.legend(handles=[line_ep, line_norm])
     plt.show()
 
-    plt.plot(range(len(e1)), e1, "b--", range(len(e2)), e2, "r+")
-    plt.show()
+    print(len(errors_ep))
